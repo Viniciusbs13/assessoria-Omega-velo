@@ -1,399 +1,593 @@
+import React, { useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { ArrowUpRight, Play, Zap, Palette, BarChart3, Shield, Menu, X } from 'lucide-react';
+import Hls from 'hls.js';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
+/** Utility for Tailwind class merging */
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
-// --- CASE FILES DATA ---
-const CASE_FILES = [
-  {
-    id: "CF_001",
-    client: "Project Scale-X",
-    result: "+R$ 1.2M / 30d",
-    metric: "ROAS 12.5x",
-    tags: ["E-COMMERCE", "ADS"],
-    image: "https://images.unsplash.com/photo-1642790103517-1355030e42f9?auto=format&fit=crop&q=80&w=800",
-    details: "Implementação de funil de escala vertical e criativos de alta retenção."
-  },
-  {
-    id: "CF_002",
-    client: "Authority Lab",
-    result: "450k Follows",
-    metric: "Engajamento +400%",
-    tags: ["PERSONAL", "VIRAL"],
-    image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800",
-    details: "Rebranding completo e estratégia de conteúdo baseada em autoridade técnica."
-  },
-  {
-    id: "CF_003",
-    client: "Nexus Fintech",
-    result: "-65% CPA",
-    metric: "LTV +120%",
-    tags: ["DATA", "ADS"],
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800",
-    details: "Otimização de algoritmos de conversão e tracking de telemetria avançada."
-  }
-];
+/** HLS Video Component */
+const HLSVideo = ({ src, className, style }: { src: string; className?: string; style?: React.CSSProperties }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-// --- COMPONENTS ---
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-const SectionTitle = ({ title, subtitle, align = "left" }: { title: string, subtitle?: string, align?: "left" | "right" }) => (
-  <div className={`mb-8 md:mb-20 ${align === "right" ? "text-right" : "text-left"}`}>
-    <motion.div 
-      initial={{ opacity: 0, x: align === "left" ? -20 : 20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      className="inline-block"
-    >
-      <span className="font-oswald text-[9px] md:text-xs uppercase tracking-[0.3em] md:tracking-[0.5em] text-[#00cfc1] mb-2 md:mb-4 block font-bold">
-        {subtitle || "Especificação Técnica"}
-      </span>
-      <h2 className="font-oswald text-4xl sm:text-6xl md:text-8xl lg:text-9xl uppercase italic leading-[0.8] tracking-tighter drop-shadow-2xl">
-        {title.split(' ').map((word, i) => (
-          <span key={i} className={i % 2 !== 0 ? "text-transparent stroke-text" : "text-white"}>
-            {word}{' '}
-          </span>
-        ))}
-      </h2>
-    </motion.div>
-  </div>
-);
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      return () => hls.destroy();
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+    }
+  }, [src]);
 
-const PortfolioSection = () => {
-  const PORTFOLIO_VIDEOS = [
-    { id: 1, title: "OMEGA_EDITS_01", category: "UGC / Retenção", url: "https://assets.mixkit.co/videos/preview/mixkit-girl-walking-on-a-pavement-in-the-city-43485-large.mp4" },
-    { id: 2, title: "ADS_CONVERSAO_V2", category: "Ads Premium", url: "https://assets.mixkit.co/videos/preview/mixkit-young-man-walking-in-the-street-at-night-42500-large.mp4" },
-    { id: 3, title: "DRONE_CINEMATIC", category: "Produção Pro", url: "https://assets.mixkit.co/videos/preview/mixkit-city-traffic-at-night-from-above-42498-large.mp4" },
-    { id: 4, title: "BRAND_VERTICAL_X", category: "Viral Content", url: "https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-typing-on-a-laptop-43574-large.mp4" },
-    { id: 5, title: "SCALE_IDENTITY", category: "Branding", url: "https://assets.mixkit.co/videos/preview/mixkit-people-walking-in-a-crowded-city-street-42501-large.mp4" },
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      loop
+      playsInline
+      className={className}
+      style={style}
+    />
+  );
+};
+
+/** BlurText Animation Component */
+const BlurText = ({ text, className }: { text: string; className?: string }) => {
+  const words = text.split(" ");
+  return (
+    <div className={cn("flex flex-wrap justify-center", className)}>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ filter: "blur(10px)", opacity: 0, y: 50 }}
+          whileInView={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{
+            duration: 0.35,
+            delay: i * 0.1,
+            ease: "easeOut"
+          }}
+          className="inline-block mr-[0.3em]"
+        >
+          {word}
+        </motion.span>
+      ))}
+    </div>
+  );
+};
+
+/** Navbar Component */
+const Navbar = () => {
+  return (
+    <nav className="fixed top-4 left-0 w-full z-50 px-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex-shrink-0">
+          <img src="https://picsum.photos/seed/omega-logo/48/48" alt="Logo" className="w-12 h-12 rounded-full" referrerPolicy="no-referrer" />
+        </div>
+
+        {/* Pill Nav */}
+        <div className="hidden md:flex items-center liquid-glass rounded-full px-6 py-2 gap-8">
+          {[
+            { name: "Início", id: "home" },
+            { name: "Serviços", id: "servicos" },
+            { name: "Portfólio", id: "portfolio" },
+            { name: "Processo", id: "processo" },
+            { name: "Preços", id: "precos" }
+          ].map((item) => (
+            <a key={item.id} href={`#${item.id}`} className="text-sm font-medium text-white/90 hover:text-white transition-colors">
+              {item.name}
+            </a>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="flex items-center">
+          <button className="bg-white text-black rounded-full px-6 py-2.5 text-sm font-medium flex items-center gap-2 hover:bg-white/90 transition-all">
+            Fale Conosco <ArrowUpRight size={16} />
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+/** Hero Section */
+const Hero = () => {
+  return (
+    <section className="relative h-[1000px] w-full overflow-visible bg-black flex flex-col items-center pt-[150px]">
+      {/* Background Video */}
+      <div className="absolute top-[20%] inset-x-0 w-full h-auto z-0 overflow-hidden">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-contain opacity-40"
+          poster="https://picsum.photos/seed/hero-fallback/1920/1080"
+        >
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4" type="video/mp4" />
+        </video>
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-black/5 z-0" />
+        <div className="absolute bottom-0 left-0 right-0 z-[1] h-[300px] bg-gradient-to-t from-black to-transparent" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6">
+        {/* Badge */}
+        <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body mb-8 flex items-center gap-2">
+          <span className="bg-white text-black px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Novo</span>
+          Apresentando o web design impulsionado por IA.
+        </div>
+
+        {/* Heading */}
+        <BlurText 
+          text="O Site que Sua Marca Merece" 
+          className="text-6xl md:text-7xl lg:text-[5.5rem] font-heading italic text-white leading-[0.8] tracking-[-4px] mb-8 max-w-4xl"
+        />
+
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0, filter: "blur(10px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 1, delay: 0.8 }}
+          className="font-body font-light text-white/60 text-sm md:text-base max-w-xl mb-12"
+        >
+          Design deslumbrante. Performance extrema. Construído por IA, refinado por especialistas. Isso é web design, reimaginado.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+          className="flex flex-col sm:flex-row items-center gap-4"
+        >
+          <button className="liquid-glass-strong rounded-full px-8 py-4 text-white font-medium flex items-center gap-2 hover:bg-white/5 transition-all">
+            Começar Agora <ArrowUpRight size={18} />
+          </button>
+          <button className="text-white font-medium flex items-center gap-2 hover:opacity-80 transition-all">
+            <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center">
+              <Play size={16} fill="white" />
+            </div>
+            Ver Portfólio
+          </button>
+        </motion.div>
+      </div>
+
+      {/* Partners Bar */}
+      <div className="mt-auto w-full pb-8 pt-16 flex flex-col items-center gap-8 relative z-10">
+        <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/60 font-body">
+          Parceiros de confiança
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
+          {["Stripe", "Vercel", "Linear", "Notion", "Figma"].map((partner) => (
+            <span key={partner} className="text-2xl md:text-3xl font-heading italic text-white opacity-40 hover:opacity-100 transition-opacity cursor-default">
+              {partner}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/** How It Works Section */
+const HowItWorks = () => {
+  return (
+    <section id="processo" className="relative min-h-[700px] w-full py-32 px-6 md:px-16 lg:px-24 flex flex-col items-center justify-center overflow-hidden">
+      {/* Background HLS Video */}
+      <div className="absolute inset-0 z-0">
+        <HLSVideo 
+          src="https://stream.mux.com/9JXDljEVWYwWu01PUkAemafDugK89o01BR6zqJ3aS9u00A.m3u8" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-0 left-0 right-0 h-[200px] bg-gradient-to-b from-black to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-black to-transparent" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 text-center max-w-4xl">
+        <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-8">
+          Como Funciona
+        </div>
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9] mb-8">
+          Você sonha. Nós entregamos.
+        </h2>
+        <p className="font-body font-light text-white/60 text-sm md:text-base mb-12 max-w-2xl mx-auto">
+          Compartilhe sua visão. Nossa IA cuida do resto—wireframes, design, código, lançamento. Tudo em dias, não meses.
+        </p>
+        <button className="liquid-glass-strong rounded-full px-8 py-4 text-white font-medium flex items-center gap-2 hover:bg-white/5 transition-all mx-auto">
+          Começar Agora <ArrowUpRight size={18} />
+        </button>
+      </div>
+    </section>
+  );
+};
+
+/** Features Chess Section */
+const FeaturesChess = () => {
+  return (
+    <section id="servicos" className="py-24 px-6 md:px-16 lg:px-24 bg-black">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-24">
+          <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+            Capacidades
+          </div>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9]">
+            Recursos Pro. Complexidade Zero.
+          </h2>
+        </div>
+
+        {/* Row 1 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-32">
+          <div>
+            <h3 className="text-3xl font-heading italic text-white mb-6">Feito para converter. Criado para performar.</h3>
+            <p className="font-body font-light text-white/60 text-sm mb-8">
+              Cada pixel é intencional. Nossa IA estuda o que funciona nos melhores sites do mundo—e constrói o seu para superar todos eles.
+            </p>
+            <button className="liquid-glass-strong rounded-full px-6 py-3 text-white text-sm font-medium hover:bg-white/5 transition-all">
+              Saiba Mais
+            </button>
+          </div>
+          <div className="liquid-glass rounded-2xl overflow-hidden aspect-video">
+            <img src="https://picsum.photos/seed/feature1/800/450" alt="Feature 1" className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+          </div>
+        </div>
+
+        {/* Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center lg:flex-row-reverse">
+          <div className="lg:order-2">
+            <h3 className="text-3xl font-heading italic text-white mb-6">Fica mais inteligente. Automaticamente.</h3>
+            <p className="font-body font-light text-white/60 text-sm mb-8">
+              Seu site evolui sozinho. A IA monitora cada clique e conversão—otimizando em tempo real. Sem atualizações manuais. Nunca.
+            </p>
+            <button className="liquid-glass-strong rounded-full px-6 py-3 text-white text-sm font-medium hover:bg-white/5 transition-all">
+              Veja como funciona
+            </button>
+          </div>
+          <div className="lg:order-1 liquid-glass rounded-2xl overflow-hidden aspect-video">
+            <img src="https://picsum.photos/seed/feature2/800/450" alt="Feature 2" className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/** Features Grid Section */
+const FeaturesGrid = () => {
+  const cards = [
+    { icon: <Zap size={20} />, title: "Dias, não Meses", desc: "Do conceito ao lançamento em um ritmo que redefine velocidade." },
+    { icon: <Palette size={20} />, title: "Obsessivamente Refinado", desc: "Cada detalhe considerado. Cada elemento polido ao extremo." },
+    { icon: <BarChart3 size={20} />, title: "Feito para Converter", desc: "Layouts informados por dados. Decisões baseadas em performance." },
+    { icon: <Shield size={20} />, title: "Seguro por Padrão", desc: "Proteção de nível empresarial incluída em cada projeto." }
   ];
 
   return (
-    <section id="portfolio" className="py-16 md:py-40 bg-[#050505] overflow-hidden select-none">
-      <div className="px-5 md:px-10 mb-8 md:mb-16">
-        <SectionTitle title="Criativos profissionais" subtitle="Portfólio Vertical" />
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/10 pb-4 md:pb-8 gap-3">
-          <p className="text-white/50 font-oswald text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.4em] uppercase font-medium">
-            Deslize para explorar
-          </p>
-          <div className="flex gap-3 items-center">
-            <span className="w-6 md:w-12 h-px bg-[#00cfc1]/30" />
-            <span className="font-mono text-[7px] md:text-[9px] text-[#00cfc1]/80 animate-pulse font-bold tracking-widest uppercase">Criativos_Impacto_Real</span>
+    <section className="py-24 px-6 md:px-16 lg:px-24 bg-black">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-16">
+          <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+            Por que nós?
           </div>
-        </div>
-      </div>
-
-      <div className="relative cursor-grab active:cursor-grabbing">
-        <motion.div 
-          drag="x"
-          dragConstraints={{ left: -1600, right: 0 }}
-          className="flex gap-4 md:gap-10 px-5 md:px-10"
-        >
-          {PORTFOLIO_VIDEOS.map((video) => (
-            <motion.div 
-              key={video.id}
-              className="relative min-w-[200px] sm:min-w-[300px] md:min-w-[400px] aspect-[9/16] bg-[#111] overflow-hidden group border border-white/5"
-              whileHover={{ scale: 1.02 }}
-            >
-              <div className="absolute inset-0 z-20 p-4 md:p-8 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                <div className="flex justify-between items-start">
-                  <div className="font-mono text-[7px] md:text-[9px] bg-black/80 px-2 py-1 md:px-3 md:py-2 backdrop-blur-md border border-white/10 text-[#00cfc1] font-bold uppercase">
-                    R: 9:16 | 4K
-                  </div>
-                  <div className="font-oswald text-[7px] md:text-[9px] tracking-[0.2em] text-[#00cfc1] bg-black/80 px-2 py-1 border border-[#00cfc1]/30 italic font-bold">
-                    {video.category}
-                  </div>
-                </div>
-                <div className="font-oswald text-xl md:text-3xl italic uppercase leading-none tracking-tighter text-white">
-                  {video.title}
-                </div>
-              </div>
-              <video src={video.url} muted loop playsInline autoPlay className="w-full h-full object-cover grayscale brightness-[0.4] group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-700" />
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-};
-
-const CaseFilesSection = () => {
-  const [activeFile, setActiveFile] = useState<number | null>(0);
-
-  // Efeito de troca automática a cada 4 segundos
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveFile((prev) => (prev === null ? 0 : (prev + 1) % CASE_FILES.length));
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <section id="engine" className="py-16 md:py-60 px-5 md:px-10 flex flex-col bg-[#050505] overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-20 items-center">
-        <div className="order-2 lg:order-1">
-          <h2 className="font-oswald text-[12vw] sm:text-[10vw] lg:text-[10vw] uppercase italic leading-[0.8] tracking-tighter mb-6 md:mb-12">
-            THE RESULTS <br /> <span className="text-[#00cfc1] text-glow-teal">VAULT.</span>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9]">
+            A diferença está nos detalhes.
           </h2>
-          <p className="text-sm md:text-lg font-medium max-w-md text-white/70 mb-8 md:mb-12 leading-relaxed">
-            Nossos arquivos de telemetria. Prova real de escala e ROI através da metodologia Omega.
-          </p>
-          <div className="flex flex-col gap-3 md:gap-5">
-            {CASE_FILES.map((file, idx) => (
-              <motion.button
-                key={file.id}
-                onClick={() => setActiveFile(idx)}
-                onMouseEnter={() => setActiveFile(idx)}
-                whileTap={{ scale: 0.98 }}
-                className={`flex items-center justify-between p-4 md:p-6 border-l-2 md:border-l-4 transition-all duration-300 ${activeFile === idx ? 'border-[#00cfc1] bg-white/5' : 'border-white/5'}`}
-              >
-                <div className="text-left">
-                  <span className="font-mono text-[7px] md:text-[9px] text-[#00cfc1] block mb-0.5">{file.id}</span>
-                  <span className="font-oswald text-base md:text-2xl uppercase italic text-white tracking-tight">{file.client}</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-oswald text-sm md:text-xl text-[#00cfc1] block">{file.result}</span>
-                  <span className="font-mono text-[7px] md:text-[8px] text-white/30 uppercase">{file.metric}</span>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-          <button className="mt-8 md:mt-12 bg-white text-black font-oswald text-sm md:text-lg px-6 py-3 md:px-12 md:py-4 uppercase tracking-[0.2em] hover:bg-[#00cfc1] transition-colors font-bold w-full sm:w-auto shadow-xl">
-            Ver Provas de Escala
-          </button>
         </div>
 
-        <div className="relative h-[300px] sm:h-[450px] md:h-[600px] flex items-center justify-center order-1 lg:order-2">
-          <AnimatePresence mode='wait'>
-            {activeFile !== null ? (
-              <motion.div
-                key={activeFile}
-                initial={{ opacity: 0, x: 100, rotate: 5 }}
-                animate={{ opacity: 1, x: 0, rotate: 0 }}
-                exit={{ opacity: 0, x: -100, rotate: -5 }}
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col p-1 md:p-1.5 z-20"
-              >
-                {/* Cabecalho da Pasta Style */}
-                <div className="bg-white/5 p-2 md:p-4 border-b border-white/10 flex justify-between items-center">
-                  <div className="flex gap-1.5">
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500/40" />
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-yellow-500/40" />
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500/40" />
-                  </div>
-                  <span className="font-mono text-[7px] md:text-[9px] text-white/30 uppercase tracking-widest truncate max-w-[120px] md:max-w-none">
-                    FILE: {CASE_FILES[activeFile].id}_TELEMETRY.JPG
-                  </span>
-                </div>
-                
-                <div className="flex-1 overflow-hidden relative group">
-                  <img 
-                    src={CASE_FILES[activeFile].image} 
-                    className="w-full h-full object-cover grayscale brightness-50 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
-                    alt="Client Result"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
-                  
-                  {/* Overlay de Info */}
-                  <div className="absolute bottom-4 left-4 right-4 md:bottom-10 md:left-10 md:right-10">
-                    <div className="flex flex-wrap gap-1.5 mb-2 md:mb-4">
-                      {CASE_FILES[activeFile].tags.map(tag => (
-                        <span key={tag} className="px-1.5 py-0.5 md:px-3 md:py-1 bg-[#00cfc1] text-black font-oswald text-[7px] md:text-[10px] font-bold uppercase">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <h4 className="font-oswald text-xl md:text-4xl uppercase italic text-white mb-1 md:mb-2 drop-shadow-lg">
-                      {CASE_FILES[activeFile].result}
-                    </h4>
-                    <p className="text-white/60 text-[9px] md:text-xs leading-relaxed max-w-sm line-clamp-2 md:line-clamp-none font-medium">
-                      {CASE_FILES[activeFile].details}
-                    </p>
-                  </div>
-
-                  {/* Carimbo de Verificação */}
-                  <div className="absolute top-8 right-8 md:top-12 md:right-12 rotate-12 border-2 md:border-4 border-[#00cfc1]/30 p-2 md:p-4 font-oswald text-lg md:text-2xl text-[#00cfc1]/30 uppercase font-black opacity-40 pointer-events-none select-none">
-                    VERIFIED_OMEGA
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="w-full h-full border-2 border-dashed border-white/5 flex items-center justify-center text-center p-6 md:p-10">
-                <div className="flex flex-col items-center gap-3 md:gap-5">
-                  <div className="w-10 h-10 md:w-16 md:h-16 rounded-full border border-[#00cfc1]/20 flex items-center justify-center animate-pulse">
-                    <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-[#00cfc1] rotate-45" />
-                  </div>
-                  <span className="font-oswald text-white/20 text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.6em] leading-relaxed">
-                    SELECIONE UM ARQUIVO <br /> PARA DESCRIPTOGRAFAR_
-                  </span>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {cards.map((card, i) => (
+            <div key={i} className="liquid-glass rounded-2xl p-8 hover:bg-white/[0.03] transition-colors group">
+              <div className="liquid-glass-strong rounded-full w-12 h-12 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                {card.icon}
               </div>
-            )}
-          </AnimatePresence>
+              <h3 className="text-xl font-heading italic text-white mb-4">{card.title}</h3>
+              <p className="text-white/60 font-body font-light text-sm leading-relaxed">
+                {card.desc}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 };
 
-const App: React.FC = () => {
-  const { scrollYProgress } = useScroll();
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
-  
-  // Restauradas animações de impacto Lando-style
-  const heroTextY = useTransform(smoothProgress, [0, 0.2], [0, -150]);
-  const heroSkew = useTransform(smoothProgress, [0, 0.2], [0, -5]);
-  const bgOpacity = useTransform(smoothProgress, [0, 0.1], [1, 0.2]);
+/** Stats Section */
+const Stats = () => {
+  const stats = [
+    { value: "200+", label: "Sites lançados" },
+    { value: "98%", label: "Satisfação" },
+    { value: "3.2x", label: "Mais conversões" },
+    { value: "5 dias", label: "Entrega média" }
+  ];
 
   return (
-    <div className="bg-[#050505] text-white font-['Inter'] selection:bg-[#00cfc1] selection:text-black">
-      
-      {/* UI Frame - Hidden on small screens to maximize space */}
-      <div className="hidden sm:block fixed inset-0 pointer-events-none z-[100] border-[6px] md:border-[10px] border-[#050505]" />
-      
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-[110] p-4 sm:p-6 md:p-8 flex flex-row justify-between items-center pointer-events-none">
-        <div className="pointer-events-auto">
-          <div className="font-oswald text-lg sm:text-2xl md:text-3xl tracking-tighter italic flex flex-col leading-none">
-            <span className="text-[#00cfc1] text-glow-teal">OMEGA</span>
-            <span className="text-white">ASSESSORIA</span>
-          </div>
+    <section className="relative py-32 overflow-hidden">
+      {/* Background HLS Video */}
+      <div className="absolute inset-0 z-0">
+        <HLSVideo 
+          src="https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8" 
+          className="w-full h-full object-cover"
+          style={{ filter: 'saturate(0)' }}
+        />
+        <div className="absolute top-0 left-0 right-0 h-[200px] bg-gradient-to-b from-black to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-black to-transparent" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6">
+        <div className="liquid-glass rounded-3xl p-12 md:p-16 grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
+          {stats.map((stat, i) => (
+            <div key={i}>
+              <div className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white mb-2">{stat.value}</div>
+              <div className="text-white/60 font-body font-light text-sm uppercase tracking-wider">{stat.label}</div>
+            </div>
+          ))}
         </div>
-        <div className="pointer-events-auto flex items-center gap-4 md:gap-10">
-          <div className="hidden lg:flex gap-6 font-oswald text-[9px] tracking-[0.2em] uppercase opacity-60 font-bold">
-            <a href="#portfolio" className="hover:text-[#00cfc1] transition-colors">Portfolio</a>
-            <a href="#strategy" className="hover:text-[#00cfc1] transition-colors">Estratégia</a>
-            <a href="#engine" className="hover:text-[#00cfc1] transition-colors">Resultados</a>
+      </div>
+    </section>
+  );
+};
+
+/** Testimonials Section */
+const Testimonials = () => {
+  const items = [
+    { name: "Sarah Chen", role: "CEO Luminary", quote: "Uma reconstrução completa em cinco dias. O processo guiado por IA é mágico, mas o refinamento humano é o que o torna elite." },
+    { name: "Marcus Webb", role: "Head of Growth Arcline", quote: "Conversões aumentaram 4x desde o lançamento. As otimizações de performance acontecem em tempo real, o que é um divisor de águas." },
+    { name: "Elena Voss", role: "Brand Director Helix", quote: "Eles não apenas projetaram nosso site; eles reimaginaram toda a nossa presença digital com um nível de craft que eu nunca tinha visto antes." }
+  ];
+
+  return (
+    <section id="depoimentos" className="py-24 px-6 md:px-16 lg:px-24 bg-black">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+            Depoimentos
           </div>
-          <button className="bg-white text-black font-oswald text-[8px] md:text-[10px] px-4 py-1.5 md:px-6 md:py-2.5 uppercase tracking-[0.15em] font-bold hover:bg-[#00cfc1] transition-colors shadow-lg">
-            Consultoria
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9]">
+            O que dizem sobre nós.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {items.map((item, i) => (
+            <div key={i} className="liquid-glass rounded-2xl p-8 flex flex-col justify-between h-full">
+              <p className="text-white/80 font-body font-light text-lg italic mb-8 leading-relaxed">
+                "{item.quote}"
+              </p>
+              <div>
+                <div className="text-white font-body font-medium text-sm">{item.name}</div>
+                <div className="text-white/50 font-body font-light text-xs">{item.role}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/** 3D Portfolio Section */
+const Portfolio3D = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const rotateX = useTransform(scrollYProgress, [0, 1], [15, -15]);
+  const rotateY = useTransform(scrollYProgress, [0, 1], [-10, 10]);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1, 0.8]);
+  const springRotateX = useSpring(rotateX, { stiffness: 100, damping: 30 });
+  const springRotateY = useSpring(rotateY, { stiffness: 100, damping: 30 });
+
+  const projects = [
+    { src: "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4", title: "E-commerce Premium", category: "Design & Dev" },
+    { src: "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4", title: "SaaS Dashboard", category: "UI/UX" },
+    { src: "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4", title: "Agência de IA", category: "Full Experience" }
+  ];
+
+  return (
+    <section id="portfolio" ref={containerRef} className="py-32 px-6 bg-black perspective-1000 overflow-hidden">
+      <div className="max-w-7xl mx-auto mb-16 text-center">
+        <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+          Nosso Trabalho
+        </div>
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9]">
+          Criado para o futuro.
+        </h2>
+      </div>
+
+      <motion.div 
+        style={{ rotateX: springRotateX, rotateY: springRotateY, scale }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-8"
+      >
+        {projects.map((project, i) => (
+          <motion.div 
+            key={i} 
+            initial={{ y: 0 }}
+            whileInView={{ y: i % 2 === 0 ? -20 : 20 }}
+            transition={{ duration: 1, ease: "easeInOut" }}
+            className="liquid-glass rounded-3xl overflow-hidden aspect-[9/16] relative group"
+          >
+            <video 
+              autoPlay 
+              muted 
+              loop 
+              playsInline 
+              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-700"
+            >
+              <source src={project.src} type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+              <h4 className="text-2xl font-heading italic text-white mb-2">{project.title}</h4>
+              <p className="text-white/60 text-sm font-body font-light">{project.category}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
+};
+
+/** CTA Footer Section */
+const CTAFooter = () => {
+  return (
+    <section id="precos" className="relative py-48 px-6 overflow-hidden flex flex-col items-center justify-center text-center">
+      {/* Background HLS Video */}
+      <div className="absolute inset-0 z-0">
+        <HLSVideo 
+          src="https://stream.mux.com/8wrHPCX2dC3msyYU9ObwqNdm00u3ViXvOSHUMRYSEe5Q.m3u8" 
+          className="w-full h-full object-cover opacity-40"
+        />
+        <div className="absolute top-0 left-0 right-0 h-[200px] bg-gradient-to-b from-black to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-black to-transparent" />
+      </div>
+
+      <div className="relative z-10 max-w-4xl">
+        <h2 className="text-5xl md:text-6xl lg:text-7xl font-heading italic text-white tracking-tight leading-[0.9] mb-8">
+          Seu próximo site começa aqui.
+        </h2>
+        <p className="font-body font-light text-white/60 text-lg mb-12 max-w-xl mx-auto">
+          Agende uma consultoria gratuita. Veja o que o design impulsionado por IA pode fazer.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button className="liquid-glass-strong rounded-full px-10 py-5 text-white font-medium flex items-center gap-2 hover:bg-white/5 transition-all">
+            Agendar Reunião <ArrowUpRight size={20} />
+          </button>
+          <button className="bg-white text-black rounded-full px-10 py-5 font-medium hover:bg-white/90 transition-all">
+            Ver Planos
           </button>
         </div>
-      </nav>
 
-      <main>
-        {/* HERO SECTION - Restaurado SkewY e Movimento Agressivo */}
-        <section className="relative h-[85vh] sm:h-screen flex items-center justify-center overflow-hidden px-5">
-          <motion.div style={{ opacity: bgOpacity }} className="absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1551009175-8a68da93d5f9?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center grayscale opacity-10 scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-[#050505]" />
-          </motion.div>
-
-          <motion.div style={{ y: heroTextY, skewY: heroSkew }} className="relative z-10 text-center">
-            <h1 className="font-oswald text-[18vw] sm:text-[14vw] uppercase italic leading-[0.75] tracking-tighter">
-              <span className="text-white drop-shadow-xl">BEYOND</span> <br />
-              <span className="text-[#00cfc1] text-glow-teal">LIMITS.</span>
-            </h1>
-            <div className="mt-6 md:mt-10 flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 uppercase font-oswald text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.4em] text-white/50 font-medium">
-              <span>Performance em Marketing</span>
-              <span className="w-6 md:w-10 h-px bg-[#00cfc1]/30 hidden md:block" />
-              <span>Assessoria Omega Scale</span>
-            </div>
-          </motion.div>
-        </section>
-
-        <PortfolioSection />
-
-        {/* STRATEGY SECTION */}
-        <section id="strategy" className="py-16 md:py-40 px-5 md:px-10 overflow-hidden bg-[#070707]">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
-              <div className="lg:w-1/3">
-                <SectionTitle title="Fórmula Omega" subtitle="Metodologia" />
-                <p className="text-white/50 text-sm md:text-base leading-relaxed font-light mb-8 md:mb-10">
-                  Sistemas de crescimento que transcendem o marketing comum. Dados, telemetria e psicologia de elite.
-                </p>
-                <button className="border border-white/10 px-6 py-3 md:px-8 md:py-4 font-oswald text-[9px] md:text-xs uppercase tracking-widest hover:bg-[#00cfc1] hover:text-black hover:border-transparent transition-all font-bold w-full sm:w-auto">
-                  Ver Ecossistema
-                </button>
-              </div>
-              
-              <div className="lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 border border-white/5">
-                {[
-                  { t: "Consultoria", d: "Auditoria de dados e posicionamento tático de elite." },
-                  { t: "Audiovisual", d: "Produção profissional com edição cinematográfica." },
-                  { t: "Tráfego (ADS)", d: "Foco obsessivo em ROI e captura de Market Share." },
-                  { t: "Identity Branding", d: "Construção de autoridade incontestável no nicho." },
-                ].map((item, i) => (
-                  <motion.div 
-                    key={i}
-                    whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
-                    className="p-6 md:p-10 bg-[#050505] transition-colors"
-                  >
-                    <span className="font-oswald text-[#00cfc1] text-[9px] md:text-xs mb-3 md:mb-5 block font-bold tracking-widest uppercase">{`Modulo_0${i+1}`}</span>
-                    <h3 className="font-oswald text-xl md:text-2xl uppercase italic mb-2 md:mb-3 text-white">{item.t}</h3>
-                    <p className="text-white/40 text-[10px] md:text-sm leading-relaxed">{item.d}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CLIENTS SECTION */}
-        <section id="clients" className="py-12 md:py-24 border-y border-white/5 relative overflow-hidden bg-black">
-          <div className="px-5 md:px-10 mb-8">
-            <SectionTitle title="Omega Network" subtitle="Parceiros" />
-          </div>
-          
-          <div className="flex overflow-hidden group">
-            <motion.div 
-              animate={{ x: [0, -1200] }}
-              transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-              className="flex gap-10 md:gap-20 whitespace-nowrap items-center py-4"
-            >
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="flex items-center gap-10 md:gap-20">
-                  <span className="font-oswald text-3xl sm:text-5xl md:text-6xl text-white/10 hover:text-[#00cfc1]/50 transition-colors uppercase italic font-bold">BRAND_PARTNER_0{i}</span>
-                  <div className="w-2 h-2 md:w-3 md:h-3 bg-[#00cfc1]/40 rotate-45" />
-                  <span className="font-oswald text-3xl sm:text-5xl md:text-6xl text-white/10 hover:text-[#00cfc1]/50 transition-colors uppercase italic font-bold">CLIENT_RESULT_0{i}</span>
-                  <div className="w-6 md:w-10 h-px bg-white/10" />
-                </div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* VAULT SECTION - Agora com autoplay de 4s */}
-        <CaseFilesSection />
-
-        {/* TELEMETRY SECTION */}
-        <section id="telemetry" className="py-16 md:py-40 px-5 md:px-10 bg-[#050505] border-t border-white/5">
-          <SectionTitle title="Telemetria Real" subtitle="Métricas" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border border-white/10">
-            {[
-              { label: "Crescimento", value: "+540%", sub: "Escala" },
-              { label: "Eficiência", value: "x8.4", sub: "ROAS" },
-              { label: "Market Share", value: "Top 1%", sub: "Rank" },
-              { label: "Alcance", value: "45M+", sub: "Hits" },
-            ].map((stat, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ backgroundColor: "rgba(0, 207, 193, 0.05)" }}
-                className="bg-[#050505] p-5 md:p-10 transition-colors"
-              >
-                <h4 className="font-oswald text-[7px] md:text-[9px] text-[#00cfc1] uppercase tracking-[0.2em] mb-4 md:mb-8 font-bold">{stat.label}</h4>
-                <div className="font-oswald text-3xl md:text-6xl mb-1 md:mb-2 italic font-bold">{stat.value}</div>
-                <p className="text-[7px] md:text-[9px] uppercase tracking-widest text-white/30 font-medium">{stat.sub}</p>
-              </motion.div>
+        <footer className="mt-48 w-full pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="text-white/40 text-xs font-body font-light">© 2026 Assessoria Omega. Studio</div>
+          <div className="flex items-center gap-8">
+            {["Privacidade", "Termos", "Contato"].map((link) => (
+              <a key={link} href="#" className="text-white/40 text-xs font-body font-light hover:text-white transition-colors">
+                {link}
+              </a>
             ))}
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="py-16 md:py-32 px-5 md:px-10 bg-black">
-          <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            <h2 className="font-oswald text-[12vw] sm:text-[10vw] uppercase italic leading-[0.7] tracking-tighter mb-12 md:mb-20">
-              PRONTO PARA <br /> <span className="text-[#00cfc1] text-glow-teal">ESCALAR?</span>
-            </h2>
-            <div className="flex flex-wrap justify-center gap-6 md:gap-16 font-oswald text-[8px] md:text-[10px] tracking-[0.2em] uppercase font-bold text-white/40">
-              <a href="#" className="hover:text-[#00cfc1] transition-colors">Instagram</a>
-              <a href="#" className="hover:text-[#00cfc1] transition-colors">LinkedIn</a>
-              <a href="#" className="hover:text-[#00cfc1] transition-colors">WhatsApp</a>
-            </div>
-            <p className="mt-16 font-mono text-[7px] text-white/20 uppercase tracking-[0.5em]">Omega Velocity © 2024 / All rights reserved</p>
           </div>
         </footer>
-      </main>
-    </div>
+      </div>
+    </section>
+  );
+};
+
+/** Pricing Section */
+const Pricing = () => {
+  const plans = [
+    { name: "Starter", price: "R$ 4.900", features: ["Landing Page IA", "Design Premium", "SEO Básico", "5 Dias de Entrega"] },
+    { name: "Pro", price: "R$ 8.900", features: ["Site Multi-página", "E-commerce IA", "SEO Avançado", "Suporte Prioritário"], popular: true },
+    { name: "Enterprise", price: "Sob Consulta", features: ["Soluções Customizadas", "Integrações Complexas", "Gestão de Dados", "SLA Dedicado"] }
+  ];
+
+  return (
+    <section id="precos" className="py-24 px-6 md:px-16 lg:px-24 bg-black">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+            Preços
+          </div>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading italic text-white tracking-tight leading-[0.9]">
+            Planos para cada escala.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {plans.map((plan, i) => (
+            <div key={i} className={cn(
+              "liquid-glass rounded-3xl p-8 flex flex-col h-full border border-white/5",
+              plan.popular && "border-white/20 bg-white/[0.02]"
+            )}>
+              <div className="mb-8">
+                <h3 className="text-2xl font-heading italic text-white mb-2">{plan.name}</h3>
+                <div className="text-3xl font-heading italic text-white">{plan.price}</div>
+              </div>
+              <ul className="space-y-4 mb-12 flex-grow">
+                {plan.features.map((feature, j) => (
+                  <li key={j} className="text-white/60 text-sm font-body font-light flex items-center gap-2">
+                    <Zap size={14} className="text-white/40" /> {feature}
+                  </li>
+                ))}
+              </ul>
+              <button className={cn(
+                "w-full py-4 rounded-full font-medium transition-all",
+                plan.popular ? "bg-white text-black hover:bg-white/90" : "liquid-glass-strong text-white hover:bg-white/5"
+              )}>
+                Escolher {plan.name}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/** FAQ Section */
+const FAQ = () => {
+  const questions = [
+    { q: "Quanto tempo leva para o site ficar pronto?", a: "Nossa média de entrega para landing pages é de 5 dias úteis após a aprovação do conceito." },
+    { q: "Como a IA é utilizada no processo?", a: "Usamos IA para gerar wireframes, otimizar o código para performance e criar layouts baseados em dados de conversão." },
+    { q: "O site é fácil de atualizar?", a: "Sim, entregamos com um CMS intuitivo para que você possa fazer alterações rápidas sem depender de código." },
+    { q: "Vocês oferecem suporte pós-lançamento?", a: "Sim, todos os nossos planos incluem suporte e manutenção para garantir que seu site continue performando." }
+  ];
+
+  return (
+    <section className="py-24 px-6 md:px-16 lg:px-24 bg-black border-t border-white/5">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-16">
+          <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body inline-block mb-4">
+            FAQ
+          </div>
+          <h2 className="text-4xl md:text-5xl font-heading italic text-white tracking-tight leading-[0.9]">
+            Perguntas Frequentes
+          </h2>
+        </div>
+
+        <div className="space-y-6">
+          {questions.map((item, i) => (
+            <div key={i} className="liquid-glass rounded-2xl p-6">
+              <h3 className="text-lg font-heading italic text-white mb-4">{item.q}</h3>
+              <p className="text-white/60 font-body font-light text-sm leading-relaxed">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/** Main App Component */
+const App: React.FC = () => {
+  return (
+    <main className="bg-black min-h-screen selection:bg-white selection:text-black">
+      <Navbar />
+      <Hero />
+      <HowItWorks />
+      <FeaturesChess />
+      <FeaturesGrid />
+      <Stats />
+      <Portfolio3D />
+      <Testimonials />
+      <Pricing />
+      <FAQ />
+      <CTAFooter />
+    </main>
   );
 };
 
